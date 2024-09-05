@@ -6,7 +6,8 @@ public class Main {
 		if (args.length != 0) {
 			switch (args[0]) {
 			case Task.ADD_COMMAND:
-				TaskHandler.add(new Task(1L, args[1]));
+				long id = TaskHandler.getNewId();
+				TaskHandler.add(new Task(id, args[1]));
 				break;
 			}
 		}

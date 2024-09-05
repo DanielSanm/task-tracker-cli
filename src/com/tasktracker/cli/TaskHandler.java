@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TaskHandler {
 	
@@ -25,7 +27,7 @@ public class TaskHandler {
 			}
 		}
 
-		StringBuilder jsonContent = readJSONfile();
+		StringBuilder jsonContent = readJSONFile();
 
 		String newContent = "{\"id\": \"" + newTask.getId() + "\"," + " \"description\": \""
 				+ newTask.getDescription() + "\"," + " \"status\": \"" + newTask.getStatus().toString().toLowerCase()
@@ -48,7 +50,7 @@ public class TaskHandler {
 		}
 	}
 	
-	private static StringBuilder readJSONfile() {
+	private static StringBuilder readJSONFile() {
 		StringBuilder content = new StringBuilder();
 		try (BufferedReader br = new BufferedReader(new FileReader(TASKS_JSON_FILE_NAME))) {
 			String line;
@@ -62,12 +64,21 @@ public class TaskHandler {
 		return content;
 	}
 	
-	public static long getLastId() {
-//		String textContent = readJSONfile().toString().replaceAll("\\s+", "");
-//		
-//		String temp = textContent.substring(textContent.indexOf("id:"), textContent.indexOf("description"));
+	public static long getNewId() {
+		String textContent = readJSONFile().toString().replaceAll("\\s+", "");
 		
-		return 0L;
+		int idIndex = textContent.lastIndexOf("id");
+		int descIndex = textContent.lastIndexOf("description");
+		
+		if (!textContent.isEmpty() && idIndex != -1 && descIndex != -1) {
+			String rowId = textContent.substring(idIndex, descIndex);
+			Matcher matcher = Pattern.compile("\\d+").matcher(rowId);
+			
+			if (matcher.find()) {
+				return Long.parseLong(matcher.group()) + 1; 
+			}
+		}
+		
+		return 1L;
 	}
-
 }
