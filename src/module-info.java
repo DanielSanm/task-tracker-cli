@@ -1,3 +1,3 @@
 
-module com.tasktracker.cli {
+module task.cli {
 }
