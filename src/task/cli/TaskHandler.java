@@ -29,12 +29,105 @@ public class TaskHandler {
 					return;
 				}
 			} catch (Exception e) {
-				e.printStackTrace();
+				System.out.println("Error creating file: " + e.getMessage());
 				return;
 			}
 		}
 
 		StringBuilder content = readJSONFile();
+
+		if (content.length() < 1) {
+			System.out.println("No tasks found.");
+			return;
+		}
+
+		parseTasksFromJson(content);
+	}
+
+	public static long getNewId() {
+		return !tasks.isEmpty() ? Collections.max(tasks.keySet()) + 1 : 1;
+	}
+
+	public static void add(Task newTask) {
+		tasks.put(newTask.getId(), newTask);
+		System.out.println("Task added successfully (ID: " + newTask.getId() + ")");
+	}
+
+	public static void update(long idTask, String newDesc) {
+		Task task = tasks.get(idTask);
+		if (task == null) {
+			System.out.println("The task ID cannot be found.");
+			return;
+		}
+
+		task.setDescription(newDesc);
+		tasks.put(idTask, task);
+		System.out.println("Task updated successfully (ID: " + idTask + ")");
+	}
+
+	public static void delete(long idTask) {
+		if (tasks.remove(idTask) == null) {
+			System.out.println("The task ID cannot be found.");
+		} else {
+			System.out.println("Task deleted (ID: " + idTask + ")");
+		}
+	}
+
+	public static void markAs(long idTask, String status) {
+		Task task = tasks.get(idTask);
+
+		if (task == null) {
+			System.out.println("The task ID cannot be found.");
+			return;
+		}
+
+		task.setStatus(status);
+		tasks.put(idTask, task);
+		System.out.println("Task marked as \"" + status + "\" (ID: " + idTask + ")");
+	}
+
+	public static void list() {
+		if (tasks.isEmpty()) {
+            System.out.println("No tasks available.");
+        } else {
+            tasks.forEach((id, task) -> System.out.println(task));
+        }
+	}
+
+	public static void list(String filter) {
+        if (tasks.isEmpty()) {
+            System.out.println("No tasks available.");
+        } else {
+            tasks.entrySet().stream()
+                    .filter(task -> task.getValue().getStatus().equals(filter))
+                    .forEach(entry -> System.out.println(entry.getValue()));
+        }
+	}
+
+	public static void save() {
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(TASKS_JSON_FILE_PATH))) {
+			StringBuilder content = new StringBuilder();
+			content.append("[\n");
+			for (Task task : tasks.values()) {
+				content.append(formatTaskToJson(task));
+			}
+
+			// Remove trailing comma if present
+			int lastComma = content.lastIndexOf(",");
+			if (lastComma != -1)
+				content.delete(lastComma, lastComma + 1);
+
+			content.append("]");
+			writer.write(content.toString());
+			System.out.println("Tasks saved successfully.");
+		} catch (IOException e) {
+			System.out.println("Error saving tasks: " + e.getMessage());
+		}
+	}
+
+	private static void parseTasksFromJson(StringBuilder content) {
+		BiFunction<Integer, Integer, String> formatValue = (startStr, endStr) -> content.substring(startStr, endStr)
+				.replaceAll("[\",]", "").trim();
 
 		while (true) {
 			int startIndex = content.indexOf("{");
@@ -48,9 +141,6 @@ public class TaskHandler {
 			if (startIndex == -1 || idIndex == -1 || descIndex == -1 || statusIndex == -1 || createdIndex == -1
 					|| updatedIndex == -1 || endIndex == -1)
 				return;
-
-			BiFunction<Integer, Integer, String> formatValue = (startStr, endStr) -> content.substring(startStr, endStr)
-					.replaceAll("[\",]", "").trim();
 
 			long idValue = Long.parseLong(formatValue.apply(idIndex + 5, descIndex));
 			String descValue = formatValue.apply(descIndex + 14, statusIndex);
@@ -66,90 +156,17 @@ public class TaskHandler {
 		}
 	}
 
-	public static long getNewId() {
-		return !tasks.isEmpty() ? Collections.max(tasks.keySet()) + 1 : 1;
-	}
-
-	public static void add(Task newTask) {
-		tasks.put(newTask.getId(), newTask);
-		System.out.println("Task added successfully (ID: " + newTask.getId() + ")");
-	}
-
-	public static void update(long idTask, String newDesc) {
-		Task task = tasks.get(idTask);
-
-		if (task == null) {
-			System.out.println("The index cannot be found.");
-			return;
-		}
-
-		task.setDescription(newDesc);
-		tasks.put(idTask, task);
-		System.out.println("Task updated successfully (ID: " + idTask + ")");
-	}
-
-	public static void delete(long idTask) {
-		if (tasks.remove(idTask) == null) {
-			System.out.println("The index cannot be found.");
-			return;
-		}
-		
-		System.out.println("Task deleted (ID: " + idTask + ")");
-	}
-
-	public static void markAs(long idTask, String status) {
-		Task task = tasks.get(idTask);
-
-		if (task == null) {
-			System.out.println("The index cannot be found.");
-			return;
-		}
-
-		task.setStatus(status);
-		tasks.put(idTask, task);
-		System.out.println("Task marked with \"" + status + "\" (ID: " + idTask + ")");
-	}
-
-	public static void list() {
-		tasks.entrySet().forEach(System.out::println);
-	}
-
-	public static void list(String filter) {
-		tasks.entrySet().stream().filter(task -> task.getValue().getStatus().equals(filter))
-				.forEach(System.out::println);
-	}
-
-	public static void save() {
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(TASKS_JSON_FILE_PATH))) {
-			StringBuilder content = new StringBuilder();
-			content.append("[\n");
-			for (Map.Entry<Long, Task> task : tasks.entrySet()) {
-				Task taskObj = task.getValue();
-				String newContent = """
-							{
-						  		"id": "%d",
-						  		"description": "%s",
-						  		"status": "%s",
-						  		"createdAt": "%s",
-						  		"updatedAt": "%s"
-							},
-						""".formatted(taskObj.getId(), taskObj.getDescription(), taskObj.getStatus(),
-						taskObj.getCreatedAt(), taskObj.getUpdatedAt());
-
-				content.append(newContent);
-			}
-
-			int lastComma = content.lastIndexOf(",");
-			if (lastComma != -1)
-				content.delete(lastComma, lastComma + 1);
-
-			content.append("]");
-
-			writer.write(content.toString());
-			System.out.println("JSON file saved succesful!");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	private static String formatTaskToJson(Task task) {
+		return """
+				{
+				  "id": "%d",
+				  "description": "%s",
+				  "status": "%s",
+				  "createdAt": "%s",
+				  "updatedAt": "%s"
+				},
+				""".formatted(task.getId(), task.getDescription(), task.getStatus(), task.getCreatedAt(),
+				task.getUpdatedAt());
 	}
 
 	private static StringBuilder readJSONFile() {
@@ -160,7 +177,7 @@ public class TaskHandler {
 				content.append(line);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			System.out.println("Error reading tasks: " + e.getMessage());
 		}
 
 		return content;
