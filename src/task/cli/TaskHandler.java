@@ -61,6 +61,7 @@ public class TaskHandler {
 		}
 
 		task.setDescription(newDesc);
+		task.setUpdatedAt(LocalDateTime.now());
 		tasks.put(idTask, task);
 		System.out.println("Task updated successfully (ID: " + idTask + ")");
 	}
